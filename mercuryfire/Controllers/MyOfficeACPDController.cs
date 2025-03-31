@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Data;
 using System.Data.SqlClient;
+using System.Data;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -12,16 +12,34 @@ public class MyOfficeACPDController : ControllerBase
         _config = config;
     }
 
-    [HttpPost("create")]
+    [HttpPost]
     public IActionResult Create([FromBody] object jsonData)
+    {
+        return ExecuteSp("usp_MyOffice_ACPD_Insert", "Insert", jsonData);
+    }
+
+    [HttpPut]
+    public IActionResult Update([FromBody] object jsonData)
+    {
+        return ExecuteSp("usp_MyOffice_ACPD_UpdateFromJson", "Update", jsonData);
+    }
+
+    [HttpDelete]
+    public IActionResult Delete([FromBody] object jsonData)
+    {
+        return ExecuteSp("usp_MyOffice_ACPD_DeleteFromJson", "Delete", jsonData);
+    }
+
+    private IActionResult ExecuteSp(string spName, string actionName, object jsonData)
     {
         string json = jsonData.ToString();
         Guid groupId = Guid.NewGuid();
+
         using (SqlConnection conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
         {
             conn.Open();
 
-            using (SqlCommand cmd = new SqlCommand("usp_MyOffice_ACPD_Insert", conn))
+            using (SqlCommand cmd = new SqlCommand(spName, conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@json", json);
@@ -33,9 +51,9 @@ public class MyOfficeACPDController : ControllerBase
                 logCmd.CommandType = CommandType.StoredProcedure;
 
                 logCmd.Parameters.AddWithValue("@_InBox_ReadID", 0);
-                logCmd.Parameters.AddWithValue("@_InBox_SPNAME", "usp_MyOffice_ACPD_Insert");
+                logCmd.Parameters.AddWithValue("@_InBox_SPNAME", spName);
                 logCmd.Parameters.AddWithValue("@_InBox_GroupID", groupId);
-                logCmd.Parameters.AddWithValue("@_InBox_ExProgram", "Insert");
+                logCmd.Parameters.AddWithValue("@_InBox_ExProgram", actionName);
                 logCmd.Parameters.AddWithValue("@_InBox_ActionJSON", json);
 
                 var outputParam = new SqlParameter("@_OutBox_ReturnValues", SqlDbType.NVarChar, -1)
@@ -47,7 +65,12 @@ public class MyOfficeACPDController : ControllerBase
                 logCmd.ExecuteNonQuery();
 
                 string logResult = outputParam.Value.ToString();
-                return Ok(new {  message = logResult });
+                return Ok(new
+                {
+                    message = $"{actionName} жие\",
+                    groupId = groupId,
+                    log = logResult
+                });
             }
         }
     }
