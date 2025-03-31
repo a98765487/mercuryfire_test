@@ -21,13 +21,40 @@ public class MyOfficeACPDController : ControllerBase
     [HttpPut]
     public IActionResult Update([FromBody] object jsonData)
     {
-        return ExecuteSp("usp_MyOffice_ACPD_UpdateFromJson", "Update", jsonData);
+        return ExecuteSp("usp_MyOffice_ACPD_Update", "Update", jsonData);
     }
 
     [HttpDelete]
     public IActionResult Delete([FromBody] object jsonData)
     {
-        return ExecuteSp("usp_MyOffice_ACPD_DeleteFromJson", "Delete", jsonData);
+        return ExecuteSp("usp_MyOffice_ACPD_Delete", "Delete", jsonData);
+    }
+
+    [HttpGet]
+    public IActionResult Read()
+    {
+        using (SqlConnection conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
+        {
+            conn.Open();
+
+            using (SqlCommand cmd = new SqlCommand("usp_MyOffice_ACPD_Read", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        string json = reader.GetString(0);
+                        return Ok(json);
+                    }
+                    else
+                    {
+                        return NotFound();
+                    }
+                }
+            }
+        }
     }
 
     private IActionResult ExecuteSp(string spName, string actionName, object jsonData)
